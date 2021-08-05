@@ -1,0 +1,61 @@
+int dbg.main (int argc, char **argv);
+; var char **s @ rbp-0x20
+; var int64_t var_14h @ rbp-0x14
+; var int start @ rbp-0x8
+; var int end @ rbp-0x4
+; arg int argc @ rdi
+; arg char **argv @ rsi
+1155        push rbp                    
+1156        mov rbp, rsp
+1159        sub rsp, 0x20
+115d        mov dword [var_14h], edi    
+1160        mov qword [s], rsi          
+1164        mov rax, qword [s]          
+1168        mov rax, qword [rax]
+116b        mov rdi, rax                
+116e        call sym.imp.strlen         
+1173        sub eax, 1                  
+1176        mov dword [end], eax
+1179        mov eax, dword [end]        
+117c        mov dword [start], eax
+117f        jmp 0x1185                  
+1181        sub dword [start], 1
+1185        mov rax, qword [s]
+1189        mov rax, qword [rax]
+118c        mov edx, dword [start]
+118f        movsxd rdx, edx
+1192        sub rdx, 1
+1196        add rax, rdx
+1199        movzx eax, byte [rax]
+119c        cmp al, 0x2f
+119e        jne 0x1181
+11a0        jmp 0x11e8                  
+11a2        mov rax, qword [s]          
+11a6        mov rdx, qword [rax]
+11a9        mov eax, dword [start]
+11ac        cdqe
+11ae        add rax, rdx
+11b1        movzx edx, byte [rax]
+11b4        mov rax, qword [s]
+11b8        mov rcx, qword [rax]
+11bb        mov eax, dword [end]
+11be        cdqe
+11c0        add rax, rcx
+11c3        movzx eax, byte [rax]
+11c6        cmp dl, al
+11c8        je 0x11e0
+11ca        lea rdi, str.Gimme_what_I_want
+11d1        call sym.imp.puts          
+11d6        mov edi, 1                 
+11db        call sym.imp.exit          
+11e0        sub dword [end], 1         
+11e4        add dword [start], 1       
+11e8        mov eax, dword [start]     
+11eb        cmp eax, dword [end]
+11ee        jl 0x11a2
+11f0        lea rdi, str.Thats_exactly_what_I_wanted
+11f7        call sym.imp.puts          
+11fc        mov eax, 0
+1201        leave                      
+1202        ret
+

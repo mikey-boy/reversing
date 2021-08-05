@@ -1,0 +1,101 @@
+racecars by chillywilly
+
+Language:       C/C++
+Difficulty:         2.0
+Platform:          Unix/Linux etc.
+Tools:                radare2
+
+Radare Variables:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+; var char **s @ rbp-0x20
+; var int64_t var_14h @ rbp-0x14
+; var int start @ rbp-0x8
+; var int end @ rbp-0x4
+; arg int argc @ rdi
+; arg char **argv @ rsi
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Analysis:
+
+    Radare2 is able to find main and we can navigate to it right away. The first few instructions are 
+part of the function prologue. We then notice that argv (which contains command line args) is loaded 
+into rax. We dereference the pointer to access the first element in the array, which is always the full 
+path to the program itself. We call strlen on the path:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1160        mov qword [s], rsi  
+1164        mov rax, qword [s]  
+1168        mov rax, qword [rax]
+116b        mov rdi, rax
+116e        call sym.imp.strlen
+...
+117f        jmp 0x1185
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    We store the path length and then jump to 0x1185. We enter a loop to find the position of the last ‘/’ 
+character. This is achieved by retrieving the path string and the path length. We modify the path sting to 
+point at the last character. If it is not ‘/’ then we jump back to the beggining of the loop and decrement 
+the index by 1.
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1181        sub dword [start], 1
+1185        mov rax, qword [s]          ; argv pointer
+1189        mov rax, qword [rax]        ; path pointer
+118c        mov edx, dword [start]      ; path length / position of last char
+118f        movsxd rdx, edx
+1192        sub rdx, 1
+1196        add rax, rdx                ; position of last character
+1199        movzx eax, byte [rax]
+119c        cmp al, 0x2f                ; check if 
+119e        jne 0x1181
+11a0        jmp 0x11e8
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Once we have the position of the last ‘/’, we effectively have the program name. We first test 
+whether a pointer to the first character of the program name is less than a pointer to last character of 
+the program name. This will be true unless our program is only one character long.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+11e8        mov eax, dword [start]
+11eb        cmp eax, dword [end]
+11ee        jl 0x11a2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Jumping to 0x1142 is actually a success condition, so we know that a 1-character long program name 
+solves the crackme. Otherwise we enter a different loop which retrieves the character at the starting index 
+and the character at the ending index. If these characters are the same, we jump back to the beginning of 
+the loop, which increments start, decrements end, and performs the above check again.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+11a2        mov rax, qword [s]      ; argv pointer
+11a6        mov rdx, qword [rax]    ; program name pointer
+11a9        mov eax, dword [start]  ; starting index
+11ac        cdqe
+11ae        add rax, rdx            ; pointer to character @ starting index
+11b1        movzx edx, byte [rax]   ; store in edx
+11b4        mov rax, qword [s]
+11b8        mov rcx, qword [rax]
+11bb        mov eax, dword [end]
+11be        cdqe
+11c0        add rax, rcx             ; pointer to character @ ending index
+11c3        movzx eax, byte [rax]
+11c6        cmp dl, al               ; compare the two characters
+11c8        je 0x11e0
+...
+11e0        sub dword [end], 1
+11e4        add dword [start], 1
+11e8        mov eax, dword [start]
+11eb        cmp eax, dword [end]
+11ee        jl 0x11a2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    We continue this loop until: 1) A character from the start differs from the end 2) Start  >= end. A 
+program name that passes such a test is considered a pallindrome, which reads the same backwards as forwards.  
+
+Summary:
+
+    The program prints “That's exactly what I wanted!” if the program name is a pallindrome, and “Gimme what 
+I want!” otherwise. It finds the program name from the full path to the executable, which is by default the 
+first element of argv. It positions an index (start) at the beginning of the program name and another index 
+(end) at the end of the program name, proceeding to check corresponding characters sequentially. 
